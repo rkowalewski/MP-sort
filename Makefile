@@ -18,7 +18,7 @@ install: libradixsort.a libmpsort-mpi.a
 	install mpsort.h $(PREFIX)/include/mpsort.h
 
 clean:
-	rm -f *.o *.a main-mpi bench-mpi main
+	rm -f *.o *.a main-mpi bench-mpi main bench-dash
 tests: main main-mpi bench-mpi
 
 main: main.c libmpsort-omp.a libradixsort.a

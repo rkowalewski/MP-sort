@@ -72,13 +72,14 @@ int main(int argc, char *argv[])
     std::cout << "\n\n";
     //Print the header
     std::cout << std::setw(4) << "#," << std::setw(15) << "mpsort,"
-              << std::setw(15) << "parallel sort," << std::setw(15) << "\n";
+              //<< std::setw(15) << "parallel sort,"
+              << std::setw(14) << "dash" << "\n";
   }
 
   double mpsort_time, psort_time, dsort_time;
 
   for (size_t iter = 0; iter < NITER + BURN_IN; ++iter) {
-    int64_t mysum   = 0;
+    int64_t mysum   = 0, mysum2;
     int64_t truesum = 0, realsum = 0;
     for (i = 0; i < mysize; i++) {
       uint64_t data =
@@ -106,10 +107,11 @@ int main(int argc, char *argv[])
       double end  = MPI_Wtime();
       mpsort_time = end - start;
     }
-    if (ThisTask == 0) {
-      // mpsort_mpi_report_last_run();
+    if (ThisTask == 0 && iter == 1) {
+      //mpsort_mpi_report_last_run();
     }
 
+#if 0
     {
       double start = MPI_Wtime();
       parallel_sort(mydata2, mysize, sizeof(int64_t), compar_int);
@@ -117,6 +119,7 @@ int main(int argc, char *argv[])
       double end = MPI_Wtime();
       psort_time = end - start;
     }
+#endif
 
     {
       double start = MPI_Wtime();
@@ -129,10 +132,12 @@ int main(int argc, char *argv[])
     mysum = 0;
     for (i = 0; i < mysize; i++) {
       mysum += mydata[i];
+#if 0
       if (mydata[i] != mydata2[i]) {
         fprintf(stderr, "sorting error\n");
         abort();
       }
+#endif
     }
 
     for (i = 0; i < mysize; i++) {
@@ -222,8 +227,8 @@ int main(int argc, char *argv[])
 
     if (iter >= BURN_IN && ThisTask == 0) {
       std::cout << std::setw(3) << iter << "," << std::setw(14) << std::fixed
-                << std::setprecision(8) << mpsort_time << "," << std::setw(14)
-                << std::fixed << std::setprecision(8) << psort_time << ","
+                << std::setprecision(8) << mpsort_time << ","
+                //<< std::setw(14) << std::fixed << std::setprecision(8) << psort_time << ","
                 << std::setw(14) << std::fixed << std::setprecision(8)
                 << dsort_time << "\n";
     }
