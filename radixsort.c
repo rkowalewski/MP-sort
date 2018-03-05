@@ -7,10 +7,15 @@
 
 #include "internal.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*****
- * msort.c is stripped from glibc git. 
+ * msort.c is stripped from glibc git.
  * qsort_r is not available till 2.8 but
- * most systems has older glibc 
+ * most systems has older glibc
  * ****/
 #include "stdlib/msort.c"
 
@@ -21,9 +26,9 @@
  *
  **** */
 
-void radix_sort(void * base, size_t nmemb, size_t size, 
-        void (*radix)(const void * ptr, void * radix, void * arg), 
-        size_t rsize, 
+void radix_sort(void * base, size_t nmemb, size_t size,
+        void (*radix)(const void * ptr, void * radix, void * arg),
+        size_t rsize,
         void * arg) {
     struct crstruct d;
     _setup_radix_sort(&d, size, radix, rsize, arg);
@@ -140,8 +145,8 @@ static void _bisect_radix_be(void * r, const void * r1, const void * r2, size_t 
 void _setup_radix_sort(
         struct crstruct *d,
         size_t size,
-        void (*radix)(const void * ptr, void * radix, void * arg), 
-        size_t rsize, 
+        void (*radix)(const void * ptr, void * radix, void * arg),
+        size_t rsize,
         void * arg) {
     const char deadbeef[] = "deadbeef";
     const uint32_t * ideadbeef = (uint32_t *) deadbeef;
@@ -181,3 +186,6 @@ void _setup_radix_sort(
     }
 }
 
+#ifdef __cplusplus
+}
+#endif

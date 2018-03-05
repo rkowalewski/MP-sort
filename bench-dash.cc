@@ -1,9 +1,3 @@
-#if __STDC_VERSION__ >= 199901L
-#define _XOPEN_SOURCE 600
-#else
-#define _XOPEN_SOURCE 500
-#endif /* __STDC_VERSION__ */
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -11,6 +5,8 @@
 #include <time.h>
 #include <string.h>
 #include <mpi.h>
+
+#include <libdash.h>
 #include "mpsort.h"
 
 #include "parallel_sort.c"
@@ -22,17 +18,12 @@ extern "C" {
 
 void mpsort_mpi_report_last_run();
 
-static double wtime() {
-    struct timespec t1;
-    clock_gettime(CLOCK_REALTIME, &t1);
-    return (double)((t1.tv_sec+t1.tv_nsec*1e-9));
-}
-
 static void radix_int(const void * ptr, void * radix, void * arg) {
     *(int64_t*)radix = *(const int64_t*) ptr;
 }
 static int compar_int(const void * p1, const void * p2) {
-    const int64_t * i1 = p1, *i2 = p2;
+    const auto i1 = reinterpret_cast<const int64_t*>(p1);
+    const auto i2 = reinterpret_cast<const int64_t*>(p2);
     return (*i1 > *i2) - (*i1 < *i2);
 }
 
@@ -42,13 +33,12 @@ static int compar_int(const void * p1, const void * p2) {
 
 int main(int argc, char * argv[]) {
     int i;
+
     MPI_Init(&argc, &argv);
+    dash::init(&argc, &argv);
 
-    int ThisTask;
-    int NTask;
-
-    MPI_Comm_size(MPI_COMM_WORLD, &NTask);
-    MPI_Comm_rank(MPI_COMM_WORLD, &ThisTask);
+    int ThisTask = dash::myid();
+    int NTask = dash::size();
 
     srand(9999 * ThisTask);
 
@@ -58,19 +48,20 @@ int main(int argc, char * argv[]) {
     }
 
     size_t mysize = atoi(argv[1]);
-    int64_t * mydata = malloc(mysize * sizeof(int64_t));
-    int64_t * mydata2 = malloc(mysize * sizeof(int64_t));
+    auto mydata = static_cast<int64_t *>(malloc(mysize * sizeof(int64_t)));
+    auto mydata2 = static_cast<int64_t *>(malloc(mysize * sizeof(int64_t)));
+
+    dash::Array<int64_t> mydata3(mysize * NTask);
 
     int64_t mysum = 0;
     int64_t truesum = 0, realsum = 0;
-
-    if(ThisTask == 2) mysize = 0;
 
     for(i = 0; i < mysize; i ++) {
         uint64_t data = (int64_t) random() * (int64_t) random() * random() * random();
         //data = 0 * ThisTask * (int64_t) mysize + i / 10;
         mydata[i] = data & 0xffffffffffffff;
         mydata2[i] = mydata[i];
+        mydata3.local[i] = mydata[i];
         mysum += mydata[i];
     }
 
@@ -83,10 +74,10 @@ int main(int argc, char * argv[]) {
         MPI_Barrier(MPI_COMM_WORLD);
         double end = MPI_Wtime();
         if(ThisTask == 0)
-            printf("radix sort: %g\n", end - start);
+            printf("mpsort: %g\n", end - start);
     }
     if(ThisTask == 0)  {
-        mpsort_mpi_report_last_run();
+        //mpsort_mpi_report_last_run();
     }
 
     {
@@ -98,10 +89,27 @@ int main(int argc, char * argv[]) {
         if(ThisTask == 0)
         printf("parallel sort: %g\n", end - start);
     }
+
+    {
+        double start = MPI_Wtime();
+        dash::sort(mydata3.begin(), mydata3.end());
+        MPI_Barrier(MPI_COMM_WORLD);
+        double end = MPI_Wtime();
+        if(ThisTask == 0)
+        printf("dash sort: %g\n", end - start);
+    }
+
     mysum = 0;
     for(i = 0; i < mysize; i ++) {
         mysum += mydata[i];
         if(mydata[i] != mydata2[i]) {
+            fprintf(stderr, "sorting error\n");
+            abort();
+        }
+    }
+
+    for(i = 0; i < mysize; i ++) {
+        if(mydata[i] != mydata3.local[i]) {
             fprintf(stderr, "sorting error\n");
             abort();
         }
@@ -156,7 +164,12 @@ int main(int argc, char * argv[]) {
             }
         }
     }
+
     free(mydata);
+    free(mydata2);
+
+    dash::finalize();
     MPI_Finalize();
+
     return 0;
 }
