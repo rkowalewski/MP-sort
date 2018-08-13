@@ -52,7 +52,7 @@ int main(int argc, char * argv[]) {
     MPI_Allreduce(&mysum, &truesum, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
 
     mpsort_mpi(mydata, mysize, sizeof(int),
-            radix_int, sizeof(int),
+            radix_int, compar_int, sizeof(int),
             NULL, MPI_COMM_WORLD);
 
     if(ThisTask == 0)  {
@@ -79,10 +79,10 @@ int main(int argc, char * argv[]) {
         int prev = -1;
         if(ThisTask == 0) {
             if(mysize == 0) {
-                MPI_Send(&prev, 1, MPI_INT, 
+                MPI_Send(&prev, 1, MPI_INT,
                         ThisTask + 1, 0xbeef, MPI_COMM_WORLD);
             } else {
-                MPI_Send(&mydata[mysize - 1], 1, MPI_INT, 
+                MPI_Send(&mydata[mysize - 1], 1, MPI_INT,
                         ThisTask + 1, 0xbeef, MPI_COMM_WORLD);
             }
         } else
@@ -97,8 +97,8 @@ int main(int argc, char * argv[]) {
                         ThisTask + 1, 0xbeef, MPI_COMM_WORLD);
             } else {
                 MPI_Sendrecv(
-                        &mydata[mysize - 1], 1, MPI_INT, 
-                        ThisTask + 1, 0xbeef, 
+                        &mydata[mysize - 1], 1, MPI_INT,
+                        ThisTask + 1, 0xbeef,
                         &prev, 1, MPI_INT,
                         ThisTask - 1, 0xbeef, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             }
